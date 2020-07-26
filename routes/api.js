@@ -48,7 +48,6 @@ module.exports = function(app) {
                   delete thread.reported;
                 });
                 res.json(docs);
-                db.close();
               });
         });
       })
@@ -79,7 +78,6 @@ module.exports = function(app) {
       .delete(function(req, res) {
         // delete a thread
         console.log('thread_id:', req.body.thread_id);
-        console.log('thread_id:', req.body.delete_password);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
@@ -89,6 +87,7 @@ module.exports = function(app) {
           }, function(err, doc) {
             if (err) {
               console.error(err);
+              res.send('An error has occurred.');
             } else if (doc.value === null) {
               console.log(doc);
               res.send('incorrect password');
@@ -96,7 +95,31 @@ module.exports = function(app) {
               console.log(doc);
               res.send('success');
             }
-            db.close();
+          });
+        });
+      })
+
+      .put(function(req, res) {
+        // report a thread
+        console.log('thread_id:', req.body.thread_id);
+        console.log('thread_id:', req.body.delete_password);
+        MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
+          const db = client.db('message-board');
+          const collection = db.collection('threads');
+          collection.findOneAndUpdate({
+            '_id': ObjectId(req.body.thread_id),
+          },
+          {$set: {'reported': true}}, // report
+          function(err, doc) {
+            if (err) {
+              console.error(err);
+            } else if (doc.value === null) {
+              console.log(doc);
+              res.send('incorrect thread id');
+            } else {
+              console.log(doc);
+              res.send('success');
+            }
           });
         });
       });
@@ -126,7 +149,6 @@ module.exports = function(app) {
             delete doc.reported;
 
             res.json(doc);
-            db.close();
           });
         });
       })
@@ -175,10 +197,11 @@ module.exports = function(app) {
                   {'reply.delete_password': req.body.delete_password},
                 ],
               }],
-              returnOriginal: false}, // let mongodb return updated value
+              returnOriginal: false}, // make mongodb return updated value
               function(err, doc) {
                 if (err) {
                   console.error(err);
+                  res.send('An error has occurred.');
                 } else {
                   console.log('Doc:', doc);
 
@@ -189,6 +212,44 @@ module.exports = function(app) {
                   if (typeof deleted === 'undefined') {
                     // The reply with specified _id is not [deleted]
                     res.send('incorrect password');
+                  } else {
+                    res.send('success');
+                  }
+                }
+              });
+        });
+      })
+
+      .put(function(req, res) {
+        // report a reply
+        console.log('thread_id:', req.body.thread_id);
+        console.log('reply_id:', req.body.reply_id);
+        MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
+          const db = client.db('message-board');
+          const collection = db.collection('threads');
+          collection.findOneAndUpdate(
+              {'_id': ObjectId(req.body.thread_id)},
+              {$set: {'replies.$[reply].reported': true}}, // report
+              {arrayFilters: [{
+                $and: [
+                  {'reply._id': ObjectId(req.body.reply_id)},
+                ],
+              }],
+              returnOriginal: false}, // make mongodb return updated value
+              function(err, doc) {
+                if (err) {
+                  console.error(err);
+                  res.send('An error has occurred.');
+                } else {
+                  console.log('Doc:', doc);
+
+                  const deleted = doc.value.replies.find(function(r) {
+                    return (r._id.toString() === req.body.reply_id) && (r.reported === true);
+                  });
+                  console.log(deleted);
+                  if (typeof deleted === 'undefined') {
+                    // The reply with specified _id is not [deleted]
+                    res.send('incorrect _id');
                   } else {
                     res.send('success');
                   }
