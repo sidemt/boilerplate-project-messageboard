@@ -32,7 +32,7 @@ module.exports = function(app) {
               .sort({bumped_on: -1}) // descending
               .limit(10)
               .toArray(function(err, docs) {
-                console.log('Docs:', docs);
+                // console.log('Docs:', docs);
                 docs.map(function(thread) {
                   // most recent 3 replies
                   thread.replies = thread.replies.sort(function(a, b) {
@@ -54,10 +54,11 @@ module.exports = function(app) {
 
       .post(function(req, res) {
         // POST a thread to a specific message board
-        console.log('REQUEST:', req.body);
+        // console.log('REQUEST:', req.body);
+        console.log(':board', req.params.board);
         const now = (new Date()).toISOString();
         const thread = {
-          board: req.body.board,
+          board: req.params.board, // retrieve the board name from the URL
           text: req.body.text,
           created_on: now,
           bumped_on: now,
@@ -69,7 +70,7 @@ module.exports = function(app) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
           collection.insertOne(thread, function(err, doc) {
-            console.log('Saved:', doc);
+            // console.log('Saved:', doc);
             res.redirect(`/b/${doc.ops[0].board}`);
           });
         });
@@ -77,7 +78,7 @@ module.exports = function(app) {
 
       .delete(function(req, res) {
         // delete a thread
-        console.log('thread_id:', req.body.thread_id);
+        // console.log('thread_id:', req.body.thread_id);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
@@ -89,10 +90,10 @@ module.exports = function(app) {
               console.error(err);
               res.send('An error has occurred.');
             } else if (doc.value === null) {
-              console.log(doc);
+              // console.log(doc);
               res.send('incorrect password');
             } else {
-              console.log(doc);
+              // console.log(doc);
               res.send('success');
             }
           });
@@ -101,8 +102,8 @@ module.exports = function(app) {
 
       .put(function(req, res) {
         // report a thread
-        console.log('thread_id:', req.body.thread_id);
-        console.log('thread_id:', req.body.delete_password);
+        // console.log('thread_id:', req.body.thread_id);
+        // console.log('thread_id:', req.body.delete_password);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
@@ -114,10 +115,10 @@ module.exports = function(app) {
             if (err) {
               console.error(err);
             } else if (doc.value === null) {
-              console.log(doc);
+              // console.log(doc);
               res.send('incorrect thread id');
             } else {
-              console.log(doc);
+              // console.log(doc);
               res.send('success');
             }
           });
@@ -127,13 +128,13 @@ module.exports = function(app) {
   app.route('/api/replies/:board')
       .get(function(req, res) {
         // GET an entire thread with all it's replies
-        console.log(':board', req.params.board);
-        console.log('thread_id=', req.query.thread_id);
+        // console.log(':board', req.params.board);
+        // console.log('thread_id=', req.query.thread_id);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
           collection.findOne({'_id': ObjectId(req.query.thread_id)}, function(err, doc) {
-            console.log('Doc:', doc);
+            // console.log('Doc:', doc);
 
             // sort replies by created_on descending
             doc.replies = doc.replies.sort(function(a, b) {
@@ -155,7 +156,7 @@ module.exports = function(app) {
 
       .post(function(req, res) {
         // POST a reply to a thread
-        console.log('REQUEST:', req.body);
+        // console.log('REQUEST:', req.body);
         const now = (new Date()).toISOString();
         const reply = {
           _id: new ObjectId(),
@@ -174,7 +175,7 @@ module.exports = function(app) {
                 $set: {bumped_on: now},
               },
               function(err, doc) {
-                console.log('Saved:', doc);
+                // console.log('Saved:', doc);
                 res.redirect(`/b/${doc.value.board}/${ObjectId(doc.value._id)}`);
               });
         });
@@ -182,9 +183,9 @@ module.exports = function(app) {
 
       .delete(function(req, res) {
         // delete a reply (just changing the text to '[deleted]')
-        console.log('thread_id:', req.body.thread_id);
-        console.log('reply_id:', req.body.reply_id);
-        console.log('delete_password:', req.body.delete_password);
+        // console.log('thread_id:', req.body.thread_id);
+        // console.log('reply_id:', req.body.reply_id);
+        // console.log('delete_password:', req.body.delete_password);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
@@ -203,12 +204,12 @@ module.exports = function(app) {
                   console.error(err);
                   res.send('An error has occurred.');
                 } else {
-                  console.log('Doc:', doc);
+                  // console.log('Doc:', doc);
 
                   const deleted = doc.value.replies.find(function(r) {
                     return (r._id.toString() === req.body.reply_id) && (r.text === '[deleted]');
                   });
-                  console.log(deleted);
+                  // console.log(deleted);
                   if (typeof deleted === 'undefined') {
                     // The reply with specified _id is not [deleted]
                     res.send('incorrect password');
@@ -222,8 +223,8 @@ module.exports = function(app) {
 
       .put(function(req, res) {
         // report a reply
-        console.log('thread_id:', req.body.thread_id);
-        console.log('reply_id:', req.body.reply_id);
+        // console.log('thread_id:', req.body.thread_id);
+        // console.log('reply_id:', req.body.reply_id);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
           const collection = db.collection('threads');
@@ -241,12 +242,12 @@ module.exports = function(app) {
                   console.error(err);
                   res.send('An error has occurred.');
                 } else {
-                  console.log('Doc:', doc);
+                  // console.log('Doc:', doc);
 
                   const deleted = doc.value.replies.find(function(r) {
                     return (r._id.toString() === req.body.reply_id) && (r.reported === true);
                   });
-                  console.log(deleted);
+                  // console.log(deleted);
                   if (typeof deleted === 'undefined') {
                     // The reply with specified _id is not [deleted]
                     res.send('incorrect _id');
