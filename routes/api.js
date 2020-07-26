@@ -156,5 +156,44 @@ module.exports = function(app) {
                 res.redirect(`/b/${doc.value.board}/${ObjectId(doc.value._id)}`);
               });
         });
+      })
+
+      .delete(function(req, res) {
+        // delete a reply (just changing the text to '[deleted]')
+        console.log('thread_id:', req.body.thread_id);
+        console.log('reply_id:', req.body.reply_id);
+        console.log('delete_password:', req.body.delete_password);
+        MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
+          const db = client.db('message-board');
+          const collection = db.collection('threads');
+          collection.findOneAndUpdate(
+              {'_id': ObjectId(req.body.thread_id)},
+              {$set: {'replies.$[reply].text': '[deleted]'}}, // change the text to '[deleted]'
+              {arrayFilters: [{
+                $and: [
+                  {'reply._id': ObjectId(req.body.reply_id)},
+                  {'reply.delete_password': req.body.delete_password},
+                ],
+              }],
+              returnOriginal: false}, // let mongodb return updated value
+              function(err, doc) {
+                if (err) {
+                  console.error(err);
+                } else {
+                  console.log('Doc:', doc);
+
+                  const deleted = doc.value.replies.find(function(r) {
+                    return (r._id.toString() === req.body.reply_id) && (r.text === '[deleted]');
+                  });
+                  console.log(deleted);
+                  if (typeof deleted === 'undefined') {
+                    // The reply with specified _id is not [deleted]
+                    res.send('incorrect password');
+                  } else {
+                    res.send('success');
+                  }
+                }
+              });
+        });
       });
 };
