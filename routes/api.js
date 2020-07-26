@@ -74,6 +74,31 @@ module.exports = function(app) {
             res.redirect(`/b/${doc.ops[0].board}`);
           });
         });
+      })
+
+      .delete(function(req, res) {
+        // delete a thread
+        console.log('thread_id:', req.body.thread_id);
+        console.log('thread_id:', req.body.delete_password);
+        MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
+          const db = client.db('message-board');
+          const collection = db.collection('threads');
+          collection.findOneAndDelete({
+            '_id': ObjectId(req.body.thread_id),
+            'delete_password': req.body.delete_password,
+          }, function(err, doc) {
+            if (err) {
+              console.error(err);
+            } else if (doc.value === null) {
+              console.log(doc);
+              res.send('incorrect password');
+            } else {
+              console.log(doc);
+              res.send('success');
+            }
+            db.close();
+          });
+        });
       });
 
   app.route('/api/replies/:board')
