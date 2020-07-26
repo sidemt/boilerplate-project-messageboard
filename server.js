@@ -1,5 +1,6 @@
 'use strict';
 
+var dotenv = require('dotenv').config();
 var express = require('express');
 var bodyParser = require('body-parser');
 var expect = require('chai').expect;
@@ -66,7 +67,7 @@ app.listen(process.env.PORT || 3000, function() {
       try {
         runner.run();
       } catch (e) {
-        let error = e;
+        const error = e;
         console.log('Tests are not valid:');
         console.log(error);
       }
