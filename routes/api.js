@@ -22,6 +22,8 @@ const MONGODB_CONNECTION_STRING = process.env.DB;
 module.exports = function(app) {
   app.route('/api/threads/:board')
       .get(function(req, res) {
+        // GET an array of the most recent 10 bumped threads on the board
+        // with only the most recent 3 replies
         console.log(':board', req.params.board);
         MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
           const db = client.db('message-board');
@@ -52,6 +54,7 @@ module.exports = function(app) {
       })
 
       .post(function(req, res) {
+        // POST a thread to a specific message board
         console.log('REQUEST:', req.body);
         const now = (new Date()).toISOString();
         const thread = {
@@ -74,7 +77,37 @@ module.exports = function(app) {
       });
 
   app.route('/api/replies/:board')
+      .get(function(req, res) {
+        // GET an entire thread with all it's replies
+        console.log(':board', req.params.board);
+        console.log('thread_id=', req.query.thread_id);
+        MongoClient.connect(MONGODB_CONNECTION_STRING, function(err, client) {
+          const db = client.db('message-board');
+          const collection = db.collection('threads');
+          collection.findOne({'_id': ObjectId(req.query.thread_id)}, function(err, doc) {
+            console.log('Doc:', doc);
+
+            // sort replies by created_on descending
+            doc.replies = doc.replies.sort(function(a, b) {
+              return Date.parse(b.created_on) - Date.parse(a.created_on);
+            });
+            doc.replies.map(function(reply) {
+              // Don't send reported and delete_passwords fields
+              delete reply.delete_password;
+              delete reply.reported;
+            });
+            // Don't send reported and delete_passwords fields
+            delete doc.delete_password;
+            delete doc.reported;
+
+            res.json(doc);
+            db.close();
+          });
+        });
+      })
+
       .post(function(req, res) {
+        // POST a reply to a thread
         console.log('REQUEST:', req.body);
         const now = (new Date()).toISOString();
         const reply = {
